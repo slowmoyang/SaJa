@@ -1,0 +1,3 @@
+dataclasses==0.8
+torch==1.7.0
+uproot==3.13.1
