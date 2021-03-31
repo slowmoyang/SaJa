@@ -1,8 +1,11 @@
 import dataclasses
+from typing import Union
+from typing import List
 import numpy as np
 import torch
 from torch import Tensor
 from torch.nn.utils.rnn import pad_sequence
+import tqdm
 import uproot
 
 
@@ -25,21 +28,59 @@ class Batch:
         return Batch(*[each.to(device) for each in dataclasses.astuple(self)])
 
 
-class SaJaDataset(torch.utils.data.Dataset):
+# TODO typing
+class JetPartonAssignmentDataset(torch.utils.data.Dataset):
 
-    def __init__(self, path, treepath, data_branches, target_branch):
-        self.path = path
-        self.treepath = treepath
+    def __init__(self,
+                 path: Union[str, List[str]],
+                 treepath: str,
+                 data_branches: List[str],
+                 target_branch: str,
+                 num_workers: int = 1,
+    ) -> None:
+        """
+        Args:
+        """
         self.data_branches = data_branches
         self.target_branch = target_branch
 
+        files = self._to_files(path, treepath)
         branches = data_branches + [target_branch]
-        tree_iter = uproot.iterate(path, treepath, branches=branches,
-                                   namedecode='utf-8')
 
+        tree_iter = uproot.iterate(files, expressions=branches, library='np',
+                                   num_workers=num_workers)
+
+        total = self._get_total_entries(files)
+        pbar = tqdm.tqdm(tree_iter)
         self._examples = []
+
+        def print_progress():
+            processed = len(self._examples)
+            pbar.set_description(f'Total = {total:d}, Processed: {processed:d}'
+                                 f' ({100 * processed / total:.2f} %)')
+
+        print_progress()
         for chunk in tree_iter:
             self._examples += self._process(chunk)
+            print_progress()
+
+    def _to_files(self, files, treepath):
+        if isinstance(files, str):
+            files = {files: treepath}
+        elif isinstance(files, list):
+            files = {each: treepath for each in files}
+        else:
+            raise TypeError
+        return files
+
+    def _get_total_entries(self, files) -> int:
+        num_entries = 0
+        for path, treepath in files.items():
+            root_file = uproot.open(path)
+            tree = root_file[treepath]
+            num_entries += tree.num_entries
+        return num_entries
+
 
     def _process(self, chunk):
         data_chunk = [chunk[branch] for branch in self.data_branches]
