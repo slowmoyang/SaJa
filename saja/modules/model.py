@@ -1,4 +1,6 @@
+from typing import Tuple
 import torch
+from torch import Tensor
 from torch import nn
 
 from saja.modules import SelfAttentionBlock
@@ -7,13 +9,13 @@ from saja.modules import ObjWise
 class SaJa(nn.Module):
     def __init__(self,
                  dim_input: int,
+                 dim_output: int,
                  dim_ffn: int = 1024,
                  num_blocks: int = 6,
                  num_heads: int = 10,
                  depth: int = 32,
                  dropout_rate: float = 0.1,
-                 dim_output: int = 5,
-                 return_attention: bool = False) -> None:
+    ) -> None:
         """
         """
         super(SaJa, self).__init__()
@@ -24,7 +26,6 @@ class SaJa(nn.Module):
         self.num_heads = num_heads
         self.dropout_rate = dropout_rate
         self.dim_output = dim_output
-        self.return_attention = return_attention
 
         self.dim_model = num_heads * depth
 
@@ -48,7 +49,13 @@ class SaJa(nn.Module):
             nn.Dropout(dropout_rate),
             nn.Linear(dim_ffn, dim_output, bias=True))
             
-    def forward(self, x, mask):
+    def forward(self, x: Tensor, mask: Tensor) -> Tuple[Tensor, Tensor]:
+        """
+        Args:
+            x: 
+            mask:
+        Returns:
+        """
         x = self.ffn_bottom(x, mask)
         attention_list = []
         for block in self.attention_blocks:
