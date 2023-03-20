@@ -1,0 +1,11 @@
+name: saja-py310
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch
+  - uproot
+  - tqdm
+  - pip
+  - pip:
+    - git+https://github.com/slowmoyang/SaJa
